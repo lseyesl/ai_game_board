@@ -7,6 +7,7 @@ const TEST_FILES := [
 	"res://tests/unit/test_wave_ship_interaction.gd",
 	"res://tests/unit/test_island_rules.gd",
 	"res://tests/unit/test_game_over_rules.gd",
+	"res://tests/unit/test_restart_rules.gd",
 ]
 
 

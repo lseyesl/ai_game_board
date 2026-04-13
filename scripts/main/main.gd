@@ -24,8 +24,25 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if run_model.is_game_over() and (Input.is_action_just_pressed("ui_accept") or Input.is_anything_pressed()):
+	if run_model.is_game_over() and Input.is_action_just_pressed("ui_accept"):
 		get_tree().reload_current_scene()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not run_model.is_game_over():
+		return
+	if _is_restart_event(event):
+		get_tree().reload_current_scene()
+
+
+func _is_restart_event(event: InputEvent) -> bool:
+	if event.is_action_pressed("ui_accept"):
+		return true
+	if event is InputEventScreenTouch:
+		return event.pressed
+	if event is InputEventMouseButton:
+		return event.pressed
+	return false
 
 
 func _build_environment() -> void:
