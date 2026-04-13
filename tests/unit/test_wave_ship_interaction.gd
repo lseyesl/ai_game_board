@@ -11,9 +11,14 @@ func run() -> Array[String]:
 	var failures: Array[String] = []
 	var model = RunModelScript.new()
 	var wave = WaveProfileScript.large()
-	ShipRulesScript.apply_wave(model, wave, 1.0)
+	ShipRulesScript.apply_wave(model, wave, 1.6)
 	if model.damage <= 0.0:
-		failures.append("large waves should add damage when applied")
+		failures.append("large waves should add damage when the threshold is exceeded")
+
+	var safe_model = RunModelScript.new()
+	ShipRulesScript.apply_wave(safe_model, wave, 1.0)
+	if safe_model.damage > 0.0:
+		failures.append("large waves should not always deal damage below the threshold")
 
 	var ship = ShipControllerScript.new()
 	ship.run_model = RunModelScript.new()

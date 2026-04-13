@@ -44,6 +44,9 @@ func _spawn_next_wave() -> void:
 	var push_direction := randf_range(0.35, 0.95)
 	push_direction *= -1.0 if randf() < 0.5 else 1.0
 	var profile = WaveProfileScript.large(push_direction) if randf() < large_wave_chance else WaveProfileScript.small(push_direction)
+	if profile.is_large:
+		profile.lift_force = randf_range(4.0, 8.0)
+		profile.damage_risk = randf_range(6.0, 10.0)
 	wave.configure(profile)
 	wave.position = Vector3(randf_range(-lane_width, lane_width), 0.0, last_spawn_z)
 	add_child(wave)
