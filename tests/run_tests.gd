@@ -14,6 +14,10 @@ const TEST_FILES := [
 
 
 func _init() -> void:
+	call_deferred("_run_tests")
+
+
+func _run_tests() -> void:
 	var failures: Array[String] = []
 	for test_path in TEST_FILES:
 		var script_resource = load(test_path)
