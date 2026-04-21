@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/islands/island.gd" id="1_island_script"]
+[ext_resource type="PackedScene" path="res://assets/island.glb" id="2_island_model"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_safe"]
+radius = 6.0
+height = 2.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_current"]
+radius = 13.0
+height = 2.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_shore"]
+top_radius = 6.0
+bottom_radius = 6.0
+height = 0.12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shore"]
+transparency = 1
+albedo_color = Color(0.745098, 0.913725, 0.909804, 0.45)
+
+[node name="Island" type="Area3D"]
+script = ExtResource("1_island_script")
+
+[node name="SafeCollision" type="CollisionShape3D" parent="."]
+shape = SubResource("CylinderShape3D_safe")
+
+[node name="CurrentArea" type="Area3D" parent="."]
+
+[node name="CurrentCollision" type="CollisionShape3D" parent="CurrentArea"]
+shape = SubResource("CylinderShape3D_current")
+
+[node name="IslandModel" parent="." instance=ExtResource("2_island_model")]
+
+[node name="ShoreMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_shore")
+surface_material_override/0 = SubResource("StandardMaterial3D_shore")
+position = Vector3(0, 0.06, 0)

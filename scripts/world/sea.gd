@@ -8,10 +8,10 @@ func _ready() -> void:
 	_build_mesh()
 
 
-func _process(_delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	if target != null:
-		global_position.x = target.global_position.x
-		global_position.z = target.global_position.z - 40.0
+		position.x = target.position.x
+		position.z = target.position.z - 40.0
 
 
 func _build_mesh() -> void:

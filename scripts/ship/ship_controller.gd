@@ -13,6 +13,7 @@ signal safe_zone_changed(in_safe_zone: bool)
 @export var steering_smoothing: float = 5.0
 @export var bob_strength: float = 0.15
 @export var gravity: float = 18.0
+@export var environment_push_damping: float = 4.0
 
 var input_adapter = null
 var run_model = null
@@ -21,6 +22,7 @@ var position_delta: Vector3 = Vector3.ZERO
 var wave_turn_velocity: float = 0.0
 var wave_turn_damping: float = 2.8
 var wave_vertical_velocity: float = 0.0
+var environment_push_velocity: Vector3 = Vector3.ZERO
 var base_y: float = 0.0
 var current_repair_rate: float = 0.0
 var safe_zone_count: int = 0
@@ -58,8 +60,14 @@ func simulate_tick(delta: float, steering_input: float) -> void:
 		var bob_offset := sin(Time.get_ticks_msec() * 0.004) * bob_strength
 		position.y = base_y + bob_offset
 
-	position_delta = -transform.basis.z.normalized() * forward_speed * delta
+	var forward_delta := -transform.basis.z.normalized() * forward_speed * delta
+	var environment_delta := environment_push_velocity * delta
+	position_delta = forward_delta + environment_delta
 	position += position_delta
+	environment_push_velocity = environment_push_velocity.lerp(
+		Vector3.ZERO,
+		clampf(delta * environment_push_damping, 0.0, 1.0)
+	)
 
 	if run_model != null:
 		run_model.advance_distance(position_delta.length())
@@ -83,6 +91,10 @@ func apply_wave_profile(profile) -> void:
 	var damage_amount: float = ShipRulesScript.apply_wave(run_model, profile, max(1.0, profile.lift_force / 4.0))
 	if damage_amount > 0.0:
 		damage_taken.emit(damage_amount)
+
+
+func apply_environment_push(push_velocity: Vector3) -> void:
+	environment_push_velocity += push_velocity
 
 
 func enter_safe_zone(repair_rate: float) -> void:
@@ -114,36 +126,12 @@ func _build_visuals() -> void:
 	collision_shape.shape = box_shape
 	add_child(collision_shape)
 
-	var hull_mesh := MeshInstance3D.new()
-	hull_mesh.name = "HullMesh"
-	var box_mesh := BoxMesh.new()
-	box_mesh.size = Vector3(1.0, 0.7, 2.4)
-	hull_mesh.mesh = box_mesh
-	var hull_material := StandardMaterial3D.new()
-	hull_material.albedo_color = Color("#FFE066")
-	hull_mesh.set_surface_override_material(0, hull_material)
-	hull_mesh.position.y = 0.35
-	add_child(hull_mesh)
-
-	var mast_mesh := MeshInstance3D.new()
-	mast_mesh.name = "MastMesh"
-	var mast_box := BoxMesh.new()
-	mast_box.size = Vector3(0.08, 1.4, 0.08)
-	mast_mesh.mesh = mast_box
-	var mast_material := StandardMaterial3D.new()
-	mast_material.albedo_color = Color("#FAF3DD")
-	mast_mesh.set_surface_override_material(0, mast_material)
-	mast_mesh.position = Vector3(0.0, 1.1, -0.1)
-	add_child(mast_mesh)
-
-	var sail_mesh := MeshInstance3D.new()
-	sail_mesh.name = "SailMesh"
-	var sail_box := BoxMesh.new()
-	sail_box.size = Vector3(0.05, 1.0, 1.0)
-	sail_mesh.mesh = sail_box
-	var sail_material := StandardMaterial3D.new()
-	sail_material.albedo_color = Color("#FAF3DD")
-	sail_mesh.set_surface_override_material(0, sail_material)
-	sail_mesh.position = Vector3(0.25, 1.0, -0.15)
-	sail_mesh.rotation_degrees = Vector3(0.0, 0.0, 22.0)
-	add_child(sail_mesh)
+	var boat_scene = load("res://assets/board.glb")
+	if boat_scene == null:
+		return
+	var boat_model = boat_scene.instantiate()
+	boat_model.name = "BoatModel"
+	boat_model.position = Vector3(0.0, 0.0, 0.0)
+	boat_model.rotation_degrees = Vector3(0.0, 0.0, 0.0)
+	boat_model.scale = Vector3(4.0, 4.0, 4.0)
+	add_child(boat_model)

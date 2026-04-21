@@ -1,17 +1,17 @@
 class_name IslandSpawner
 extends Node3D
 
-const IslandScript = preload("res://scripts/islands/island.gd")
+const IslandScene = preload("res://scenes/islands/Island.tscn")
 
-@export var spawn_distance_ahead: float = 140.0
-@export var cleanup_distance_behind: float = 35.0
-@export var min_spacing: float = 40.0
-@export var max_spacing: float = 56.0
-@export var lane_width: float = 9.0
+@export var target_island_count: int = 8
+@export var cleanup_radius: float = 85.0
+@export var spawn_outer_half_width: float = 28.0
+@export var spawn_outer_half_depth: float = 42.0
+@export var spawn_inner_half_width: float = 10.0
+@export var spawn_inner_half_depth: float = 16.0
 
 var ship = null
 var run_model = null
-var last_spawn_z: float = -30.0
 
 
 func _process(_delta: float) -> void:
@@ -20,21 +20,59 @@ func _process(_delta: float) -> void:
 	if run_model != null and run_model.is_game_over():
 		return
 
-	while ship.global_position.z - last_spawn_z < spawn_distance_ahead:
+	while _active_island_count() < target_island_count:
 		_spawn_next_island()
 
 	for child in get_children():
-		if child is Area3D and child.global_position.z > ship.global_position.z + cleanup_distance_behind:
+		if child is Area3D and child.global_position.distance_to(ship.global_position) > cleanup_radius:
 			child.queue_free()
 
 
-func get_next_spawn_z(current_z: float) -> float:
-	return current_z - min_spacing
+func generate_spawn_offset() -> Vector3:
+	var side := randi_range(0, 3)
+	match side:
+		0:
+			return Vector3(
+				randf_range(-spawn_outer_half_width, -spawn_inner_half_width),
+				0.0,
+				randf_range(-spawn_outer_half_depth, spawn_outer_half_depth)
+			)
+		1:
+			return Vector3(
+				randf_range(spawn_inner_half_width, spawn_outer_half_width),
+				0.0,
+				randf_range(-spawn_outer_half_depth, spawn_outer_half_depth)
+			)
+		2:
+			return Vector3(
+				randf_range(-spawn_outer_half_width, spawn_outer_half_width),
+				0.0,
+				randf_range(-spawn_outer_half_depth, -spawn_inner_half_depth)
+			)
+		_:
+			return Vector3(
+				randf_range(-spawn_outer_half_width, spawn_outer_half_width),
+				0.0,
+				randf_range(spawn_inner_half_depth, spawn_outer_half_depth)
+			)
+
+
+func is_in_spawn_band(offset: Vector3) -> bool:
+	if absf(offset.x) > spawn_outer_half_width or absf(offset.z) > spawn_outer_half_depth:
+		return false
+	return absf(offset.x) >= spawn_inner_half_width or absf(offset.z) >= spawn_inner_half_depth
+
+
+func _active_island_count() -> int:
+	var island_count := 0
+	for child in get_children():
+		if child is Area3D:
+			island_count += 1
+	return island_count
 
 
 func _spawn_next_island() -> void:
-	last_spawn_z -= randf_range(min_spacing, max_spacing)
-	var island = IslandScript.new()
-	island.position = Vector3(randf_range(-lane_width, lane_width), 0.0, last_spawn_z)
+	var island: Island = IslandScene.instantiate()
+	island.position = ship.global_position + generate_spawn_offset()
 	island.repair_rate = randf_range(10.0, 16.0)
 	add_child(island)
