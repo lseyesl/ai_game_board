@@ -134,4 +134,20 @@ func _build_visuals() -> void:
 	boat_model.position = Vector3(0.0, 0.0, 0.0)
 	boat_model.rotation_degrees = Vector3(0.0, 0.0, 0.0)
 	boat_model.scale = Vector3(4.0, 4.0, 4.0)
+	_promote_visual_priority(boat_model)
 	add_child(boat_model)
+
+
+func _promote_visual_priority(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		var overlay := StandardMaterial3D.new()
+		overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		overlay.albedo_color = Color(1.0, 1.0, 1.0, 0.0)
+		overlay.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+		overlay.render_priority = 127
+		overlay.no_depth_test = true
+		mesh_instance.material_overlay = overlay
+
+	for child in node.get_children():
+		_promote_visual_priority(child)
