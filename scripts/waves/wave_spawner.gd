@@ -116,4 +116,6 @@ func _spawn_next_wave(forward: Vector3) -> void:
 		profile.lift_force = randf_range(4.0, 8.0)
 		profile.damage_risk = randf_range(6.0, 10.0)
 	wave.reset_for_spawn(spawn_position, profile)
+	var drift_sign := -1.0 if randf() < 0.5 else 1.0
+	wave.configure_drift(right * drift_sign * profile.drift_speed)
 	add_child(wave)
