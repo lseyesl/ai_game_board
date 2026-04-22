@@ -159,6 +159,26 @@ func run() -> Array[String]:
 	if wave_d.monitoring:
 		failures.append("deactivate_to_pool should disable monitoring")
 
+	# Test: drift_velocity is applied during _process
+	var drift_wave := spawner.acquire_wave()
+	var drift_profile = WaveProfileScript.small(0.5)
+	drift_profile.drift_speed = 2.0
+	drift_wave.reset_for_spawn(Vector3.ZERO, drift_profile)
+	drift_wave.configure_drift(Vector3(1.0, 0.0, 0.0) * drift_profile.drift_speed)
+	spawner.add_child(drift_wave)
+
+	var pos_before := drift_wave.position.x
+	drift_wave._process(1.0)
+	if drift_wave.position.x <= pos_before:
+		failures.append("wave should move laterally when drift_velocity is set and _process is called")
+
+	# Test: deactivate_to_pool zeroes drift_velocity and stops processing
+	drift_wave.deactivate_to_pool()
+	if drift_wave.drift_velocity != Vector3.ZERO:
+		failures.append("deactivate_to_pool should zero drift_velocity")
+	if drift_wave.is_processing():
+		failures.append("deactivate_to_pool should stop processing")
+
 	parent.queue_free()
 
 	return failures

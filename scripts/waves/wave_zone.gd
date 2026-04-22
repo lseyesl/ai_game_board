@@ -10,12 +10,18 @@ var damage_risk: float = 0.0
 var is_large: bool = false
 var consumed: bool = false
 var spawner = null
+var drift_velocity: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
 	monitoring = true
 	body_entered.connect(_on_body_entered)
 	_build_visuals()
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	position += drift_velocity * delta
 
 
 func configure(profile) -> void:
@@ -26,16 +32,23 @@ func configure(profile) -> void:
 	_update_visuals()
 
 
+func configure_drift(velocity: Vector3) -> void:
+	drift_velocity = velocity
+
+
 func reset_for_spawn(spawn_position: Vector3, profile) -> void:
 	consumed = false
 	monitoring = true
 	position = spawn_position
 	configure(profile)
+	set_process(true)
 
 
 func deactivate_to_pool() -> void:
 	consumed = true
 	monitoring = false
+	drift_velocity = Vector3.ZERO
+	set_process(false)
 
 
 func _on_body_entered(body: Node) -> void:
