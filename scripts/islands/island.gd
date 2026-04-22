@@ -12,6 +12,7 @@ const ShipControllerScript = preload("res://scripts/ship/ship_controller.gd")
 var is_preview: bool = false
 var reveal_ratio: float = 1.0
 
+var safe_bodies: Array[ShipControllerScript] = []
 var current_bodies: Array[ShipControllerScript] = []
 @onready var safe_collision: CollisionShape3D = get_node_or_null("SafeCollision")
 @onready var current_area: Area3D = get_node_or_null("CurrentArea")
@@ -61,6 +62,8 @@ func _on_body_entered(body: Node) -> void:
 	if is_preview:
 		return
 	if body is ShipControllerScript:
+		if not safe_bodies.has(body):
+			safe_bodies.append(body)
 		body.enter_safe_zone(repair_rate)
 
 
@@ -68,6 +71,7 @@ func _on_body_exited(body: Node) -> void:
 	if is_preview:
 		return
 	if body is ShipControllerScript:
+		safe_bodies.erase(body)
 		body.exit_safe_zone(repair_rate)
 
 
@@ -86,6 +90,10 @@ func _on_current_body_exited(body: Node) -> void:
 func set_preview_state(value: bool) -> void:
 	is_preview = value
 	if is_preview:
+		for body in safe_bodies:
+			if is_instance_valid(body):
+				body.exit_safe_zone(repair_rate)
+		safe_bodies.clear()
 		current_bodies.clear()
 	_sync_scene_setup()
 
@@ -100,6 +108,22 @@ func update_reveal_from_distance(distance: float, reveal_distance: float) -> voi
 		update_reveal_state(1.0)
 		return
 	update_reveal_state(1.0 - clampf(distance / reveal_distance, 0.0, 1.0))
+
+
+func deactivate_to_pool() -> void:
+	for body in safe_bodies:
+		if is_instance_valid(body):
+			body.exit_safe_zone(repair_rate)
+	safe_bodies.clear()
+	current_bodies.clear()
+
+
+func reset_for_spawn(spawn_position: Vector3, next_repair_rate: float = repair_rate) -> void:
+	deactivate_to_pool()
+	position = spawn_position
+	repair_rate = next_repair_rate
+	update_reveal_state(1.0)
+	set_preview_state(false)
 
 
 func calculate_current_push(body_position: Vector3, delta: float) -> Vector3:

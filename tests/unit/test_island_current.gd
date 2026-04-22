@@ -86,6 +86,48 @@ func run() -> Array[String]:
 		var shore_material := shore_mesh.get_active_material(0) as StandardMaterial3D
 		if shore_material == null or shore_material.albedo_color.a >= 0.45:
 			failures.append("preview islands should fade the shore mesh while distant")
+
+		var pooled_ship = ShipControllerScript.new()
+		pooled_ship.run_model = RunModelScript.new()
+		visual_island.set_preview_state(false)
+		visual_island._on_body_entered(pooled_ship)
+		visual_island._on_current_body_entered(pooled_ship)
+		pooled_ship.simulate_tick(1.0, 0.0)
+		if not pooled_ship.run_model.invulnerable or not pooled_ship.run_model.repairing:
+			failures.append("active islands should establish safe-zone state before pool deactivation")
+		if not visual_island.has_method("deactivate_to_pool"):
+			failures.append("island should expose a deactivate_to_pool reuse hook")
+		else:
+			visual_island.deactivate_to_pool()
+			pooled_ship.simulate_tick(1.0, 0.0)
+			if pooled_ship.run_model.invulnerable:
+				failures.append("deactivate_to_pool should clear stale safe-zone invulnerability")
+			if pooled_ship.run_model.repairing:
+				failures.append("deactivate_to_pool should clear stale safe-zone repair state")
+			if visual_island.current_bodies.size() != 0:
+				failures.append("deactivate_to_pool should clear retained current bodies")
+
+		visual_island.set_preview_state(true)
+		visual_island.update_reveal_state(0.0)
+		if not visual_island.has_method("reset_for_spawn"):
+			failures.append("island should expose a reset_for_spawn reuse hook")
+		else:
+			visual_island.reset_for_spawn(Vector3(14.0, 0.0, -22.0), 15.5)
+			if visual_island.is_preview:
+				failures.append("reset_for_spawn should clear stale preview mode")
+			if not is_equal_approx(visual_island.reveal_ratio, 1.0):
+				failures.append("reset_for_spawn should restore reveal progress for reused islands")
+			if visual_island.position != Vector3(14.0, 0.0, -22.0):
+				failures.append("reset_for_spawn should place reused islands at the requested spawn position")
+			if not is_equal_approx(visual_island.repair_rate, 15.5):
+				failures.append("reset_for_spawn should refresh the repair rate for reused islands")
+			if island_model.scale.x > 1.001:
+				failures.append("reset_for_spawn should clear stale preview overscale visuals")
+			shore_material = shore_mesh.get_active_material(0) as StandardMaterial3D
+			if shore_material == null or shore_material.albedo_color.a <= 0.4:
+				failures.append("reset_for_spawn should restore faded reveal visuals for reused islands")
+
+		pooled_ship.free()
 		visual_island.queue_free()
 
 	active_ship.free()
