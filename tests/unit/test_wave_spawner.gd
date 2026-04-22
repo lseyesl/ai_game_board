@@ -145,8 +145,8 @@ func run() -> Array[String]:
 		for child in spawned_children:
 			var offset: Vector3 = child.global_position - dir_ship.global_position
 			var forward_dist: float = offset.dot(forward)
-			# Waves ahead of the ship have negative forward_dist (along forward direction)
-			if forward_dist > 0.0:
+			# Waves ahead of the ship have positive forward_dist (along forward direction)
+			if forward_dist < 0.0:
 				all_ahead = false
 		if not all_ahead:
 			failures.append("spawned waves should appear ahead of the ship along its forward direction, not behind it")

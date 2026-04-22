@@ -54,12 +54,12 @@ func _process(_delta: float) -> void:
 	for child in get_children():
 		if child is Area3D:
 			var forward_dist: float = (child.global_position as Vector3 - ship_position).dot(forward)
-			if forward_dist < 0.0 and forward_dist > max_ahead:
+			if forward_dist > 0.0 and forward_dist > max_ahead:
 				max_ahead = forward_dist
 	_furthest_ahead_distance = max_ahead if max_ahead > -INF else 0.0
 
 	# Spawn waves ahead until coverage reaches spawn_distance_ahead
-	while -_furthest_ahead_distance < spawn_distance_ahead:
+	while _furthest_ahead_distance < spawn_distance_ahead:
 		_spawn_next_wave(forward)
 
 
@@ -105,7 +105,7 @@ func _spawn_next_wave(forward: Vector3) -> void:
 	var ship_position := ship.global_position as Vector3
 	var right := forward.cross(Vector3.UP).normalized()
 	var spacing := randf_range(min_spacing, max_spacing)
-	_furthest_ahead_distance -= spacing
+	_furthest_ahead_distance += spacing
 	var spawn_position := ship_position + forward * _furthest_ahead_distance + right * randf_range(-lane_width, lane_width)
 	var wave := acquire_wave()
 	wave.spawner = self
