@@ -11,7 +11,7 @@ const IslandScene = preload("res://scenes/islands/Island.tscn")
 @export var spawn_inner_half_depth: float = 16.0
 @export var preview_visible_distance: float = 72.0
 @export var active_distance: float = 24.0
-@export var minimum_island_spacing: float = 0.0
+@export var minimum_island_spacing: float = 28.0
 @export var spawn_retry_limit: int = 8
 
 var ship = null
@@ -87,11 +87,17 @@ func is_in_spawn_band(offset: Vector3) -> bool:
 
 
 func generate_validated_spawn_position(ship_position: Vector3, existing_positions: Array[Vector3]) -> Variant:
+	var best_position: Variant = null
+	var best_distance := -1.0
 	for _attempt in range(spawn_retry_limit):
 		var spawn_position := ship_position + generate_spawn_offset()
-		if _is_position_valid(spawn_position, existing_positions):
-			return spawn_position
-	return null
+		if not _is_position_valid(spawn_position, existing_positions):
+			continue
+		var distance_to_ship := spawn_position.distance_to(ship_position)
+		if distance_to_ship > best_distance:
+			best_distance = distance_to_ship
+			best_position = spawn_position
+	return best_position
 
 
 func _active_island_count() -> int:
