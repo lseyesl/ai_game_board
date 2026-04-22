@@ -16,6 +16,14 @@ const IslandScene = preload("res://scenes/islands/Island.tscn")
 
 var ship = null
 var run_model = null
+var inactive_islands: Array[Island] = []
+
+
+func _exit_tree() -> void:
+	for island in inactive_islands:
+		if is_instance_valid(island):
+			island.free()
+	inactive_islands.clear()
 
 
 func _process(_delta: float) -> void:
@@ -24,19 +32,23 @@ func _process(_delta: float) -> void:
 	if run_model != null and run_model.is_game_over():
 		return
 
+	var islands_to_release: Array[Island] = []
+	for child in get_children():
+		if child is Island and child.global_position.distance_to(ship.global_position) > cleanup_radius:
+			islands_to_release.append(child)
+
+	for island in islands_to_release:
+		release_island_to_pool(island)
+
 	while _active_island_count() < target_island_count:
 		if not _spawn_next_island():
 			break
-
-	for child in get_children():
-		if child is Area3D and child.global_position.distance_to(ship.global_position) > cleanup_radius:
-			child.queue_free()
 
 	_update_island_reveal_states()
 
 
 func _effective_spawn_outer_half_width() -> float:
-	return maxf(spawn_outer_half_width, preview_visible_distance)
+	return spawn_outer_half_width
 
 
 func _effective_spawn_outer_half_depth() -> float:
@@ -46,38 +58,32 @@ func _effective_spawn_outer_half_depth() -> float:
 func generate_spawn_offset() -> Vector3:
 	var outer_half_width := _effective_spawn_outer_half_width()
 	var outer_half_depth := _effective_spawn_outer_half_depth()
-	var side := randi_range(0, 3)
-	match side:
+	var region := randi_range(0, 2)
+	match region:
 		0:
 			return Vector3(
 				randf_range(-outer_half_width, -spawn_inner_half_width),
 				0.0,
-				randf_range(-outer_half_depth, outer_half_depth)
+				randf_range(-outer_half_depth, -spawn_inner_half_depth)
 			)
 		1:
 			return Vector3(
-				randf_range(spawn_inner_half_width, outer_half_width),
-				0.0,
-				randf_range(-outer_half_depth, outer_half_depth)
-			)
-		2:
-			return Vector3(
-				randf_range(-outer_half_width, outer_half_width),
+				randf_range(-spawn_inner_half_width, spawn_inner_half_width),
 				0.0,
 				randf_range(-outer_half_depth, -spawn_inner_half_depth)
 			)
 		_:
 			return Vector3(
-				randf_range(-outer_half_width, outer_half_width),
+				randf_range(spawn_inner_half_width, outer_half_width),
 				0.0,
-				randf_range(spawn_inner_half_depth, outer_half_depth)
+				randf_range(-outer_half_depth, -spawn_inner_half_depth)
 			)
 
 
 func is_in_spawn_band(offset: Vector3) -> bool:
-	if absf(offset.x) > _effective_spawn_outer_half_width() or absf(offset.z) > _effective_spawn_outer_half_depth():
+	if absf(offset.x) > _effective_spawn_outer_half_width():
 		return false
-	return absf(offset.x) >= spawn_inner_half_width or absf(offset.z) >= spawn_inner_half_depth
+	return offset.z >= -_effective_spawn_outer_half_depth() and offset.z <= -spawn_inner_half_depth
 
 
 func generate_validated_spawn_position(ship_position: Vector3, existing_positions: Array[Vector3]) -> Variant:
@@ -94,6 +100,30 @@ func _active_island_count() -> int:
 		if child is Area3D:
 			island_count += 1
 	return island_count
+
+
+func acquire_island() -> Island:
+	if not inactive_islands.is_empty():
+		var island: Island = inactive_islands.pop_back()
+		return island
+	return IslandScene.instantiate()
+
+
+func release_island_to_pool(island: Island) -> void:
+	if island == null:
+		return
+	if inactive_islands.has(island):
+		return
+	if island.get_parent() == self:
+		remove_child(island)
+	elif island.get_parent() != null:
+		return
+	island.deactivate_to_pool()
+	inactive_islands.append(island)
+
+
+func get_inactive_pool_size() -> int:
+	return inactive_islands.size()
 
 
 func _is_position_valid(spawn_position: Vector3, existing_positions: Array[Vector3]) -> bool:
@@ -137,8 +167,9 @@ func _spawn_next_island() -> bool:
 	if spawn_position == null:
 		return false
 
-	var island: Island = IslandScene.instantiate()
-	island.position = _to_local_spawn_position(spawn_position)
-	island.repair_rate = randf_range(10.0, 16.0)
+	var island := acquire_island()
+	var local_spawn_position := _to_local_spawn_position(spawn_position)
+	var repair_rate := randf_range(10.0, 16.0)
+	island.reset_for_spawn(local_spawn_position, repair_rate)
 	add_child(island)
 	return true
