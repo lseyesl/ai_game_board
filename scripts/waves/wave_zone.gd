@@ -88,6 +88,7 @@ func _build_visuals() -> void:
 	material.albedo_color.a = 0.65
 	mesh_instance.set_surface_override_material(0, material)
 	mesh_instance.position.y = 0.3
+	mesh_instance.visible = false
 	add_child(mesh_instance)
 
 
