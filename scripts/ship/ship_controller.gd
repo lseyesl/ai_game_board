@@ -11,7 +11,9 @@ signal safe_zone_changed(in_safe_zone: bool)
 @export var forward_speed: float = 18.0
 @export var turn_speed: float = 1.7
 @export var steering_smoothing: float = 5.0
-@export var bob_strength: float = 0.15
+@export var bob_strength: float = 0.4
+@export var pitch_strength: float = 2.5
+@export var roll_strength: float = 1.8
 @export var gravity: float = 18.0
 @export var environment_push_damping: float = 4.0
 
@@ -56,9 +58,15 @@ func simulate_tick(delta: float, steering_input: float) -> void:
 		if position.y <= base_y:
 			position.y = base_y
 			wave_vertical_velocity = 0.0
+		_apply_boat_tilt(0.0, 0.0)
 	else:
-		var bob_offset := sin(Time.get_ticks_msec() * 0.004) * bob_strength
+		var t := Time.get_ticks_msec() / 1000.0
+		var speed_factor := clampf(forward_speed / 18.0, 0.3, 1.5)
+		var bob_offset := (sin(t * 2.0) + sin(t * 3.7) * 0.3 + sin(t * 0.8) * 0.5) * bob_strength * speed_factor
 		position.y = base_y + bob_offset
+		var pitch := sin(t * 2.0 + 0.5) * pitch_strength * speed_factor
+		var roll := sin(t * 1.3 + 1.0) * roll_strength * speed_factor
+		_apply_boat_tilt(pitch, roll)
 
 	var forward_delta := -transform.basis.z.normalized() * forward_speed * delta
 	var environment_delta := environment_push_velocity * delta
@@ -78,6 +86,14 @@ func simulate_tick(delta: float, steering_input: float) -> void:
 		else:
 			run_model.invulnerable = false
 			run_model.repairing = false
+
+
+func _apply_boat_tilt(pitch_deg: float, roll_deg: float) -> void:
+	var boat_model := get_node_or_null("BoatModel")
+	if boat_model == null:
+		return
+	boat_model.rotation_degrees.x = pitch_deg
+	boat_model.rotation_degrees.z = roll_deg
 
 
 func apply_wave_profile(profile) -> void:
