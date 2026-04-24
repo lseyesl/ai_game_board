@@ -14,7 +14,7 @@ static func small(push_direction: float = 0.45):
 	profile.lift_force = 0.0
 	profile.damage_risk = 0.0
 	profile.is_large = false
-	profile.drift_speed = randf_range(1.0, 3.0)
+	profile.drift_speed = randf_range(0.2, 0.8)
 	return profile
 
 
@@ -24,5 +24,5 @@ static func large(push_direction: float = 0.9):
 	profile.lift_force = 6.0
 	profile.damage_risk = 8.0
 	profile.is_large = true
-	profile.drift_speed = randf_range(2.0, 5.0)
+	profile.drift_speed = randf_range(0.3, 1.2)
 	return profile
