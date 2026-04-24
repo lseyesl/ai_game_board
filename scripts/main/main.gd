@@ -7,6 +7,7 @@ const HUDScript = preload("res://scripts/ui/hud.gd")
 const CameraRigScript = preload("res://scripts/camera/camera_rig.gd")
 const WaveSpawnerScript = preload("res://scripts/waves/wave_spawner.gd")
 const IslandSpawnerScript = preload("res://scripts/islands/island_spawner.gd")
+const DebugOverlayScript = preload("res://scripts/debug/debug_overlay.gd")
 
 var run_model = RunModelScript.new()
 var ship = null
@@ -15,6 +16,7 @@ var hud = null
 var camera_rig = null
 var wave_spawner = null
 var island_spawner = null
+var debug_overlay = null
 
 
 func _ready() -> void:
@@ -83,6 +85,10 @@ func _build_gameplay() -> void:
 	wave_spawner.ship = ship
 	wave_spawner.run_model = run_model
 	add_child(wave_spawner)
+
+	debug_overlay = DebugOverlayScript.new()
+	debug_overlay.wave_spawner = wave_spawner
+	add_child(debug_overlay)
 
 	island_spawner = IslandSpawnerScript.new()
 	island_spawner.ship = ship

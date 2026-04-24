@@ -60,6 +60,7 @@ func _on_body_entered(body: Node) -> void:
 		profile.damage_risk = damage_risk
 		body.apply_wave_profile(profile)
 		consumed = true
+		_fade_out_consumed()
 		if spawner != null and spawner.has_method("release_wave_to_pool"):
 			spawner.release_wave_to_pool(self)
 		else:
@@ -88,7 +89,7 @@ func _build_visuals() -> void:
 	material.albedo_color.a = 0.65
 	mesh_instance.set_surface_override_material(0, material)
 	mesh_instance.position.y = 0.3
-	mesh_instance.visible = false
+	mesh_instance.visible = true
 	add_child(mesh_instance)
 
 
@@ -101,3 +102,20 @@ func _update_visuals() -> void:
 		return
 	material.albedo_color = Color("#FF0000") if is_large else Color("#87CEEB")
 	material.albedo_color.a = 0.65
+
+
+func _fade_out_consumed() -> void:
+	var mesh_instance := get_node_or_null("WaveMesh")
+	if mesh_instance == null:
+		return
+	var material := mesh_instance.get_active_material(0) as StandardMaterial3D
+	if material == null:
+		return
+	material.albedo_color = Color("#888888")
+	material.albedo_color.a = 0.25
+
+
+func set_debug_visible(vis: bool) -> void:
+	var mesh_instance := get_node_or_null("WaveMesh")
+	if mesh_instance != null:
+		mesh_instance.visible = vis
