@@ -36,6 +36,7 @@
 
 - `docs/ai/commit-convention.md` — commit message 格式和 type 清单
 - `docs/ai/plan-workflow.md` — plan 流程（调研→设计→计划→实现→归档确认）
+- `docs/ai/worktree-branch-cleanup.md` — worktree 创建、合并、清理流程
 
 ## Repo-local noise to ignore during exploration
 - `.godot/` and `.import/` are generated editor/import artifacts.
