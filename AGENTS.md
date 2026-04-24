@@ -32,6 +32,11 @@
 - `scripts/input/steering_input.gd` prefers accelerometer, then gyroscope, then keyboard fallback via default `ui_left` / `ui_right` actions.
 - Restart flow uses `ui_accept` in `scripts/main/main.gd`.
 
+## AI workflow references
+
+- `docs/ai/commit-convention.md` — commit message 格式和 type 清单
+- `docs/ai/plan-workflow.md` — plan 流程（调研→设计→计划→实现→归档确认）
+
 ## Repo-local noise to ignore during exploration
 - `.godot/` and `.import/` are generated editor/import artifacts.
 - `.worktrees/` is an excluded nested worktree area, not primary source.
