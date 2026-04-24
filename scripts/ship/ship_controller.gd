@@ -52,20 +52,25 @@ func simulate_tick(delta: float, steering_input: float) -> void:
 	rotate_y(-(steering_axis_smoothed + wave_turn_velocity) * turn_speed * delta)
 	wave_turn_velocity = move_toward(wave_turn_velocity, 0.0, wave_turn_damping * delta)
 
-	if wave_vertical_velocity > 0.0 or position.y > base_y + 0.05:
+	var t := Time.get_ticks_msec() / 1000.0
+	var speed_factor := clampf(forward_speed / 18.0, 0.3, 1.5)
+	var bob_offset := (sin(t * 2.0) + sin(t * 3.7) * 0.3 + sin(t * 0.8) * 0.5) * bob_strength * speed_factor
+	var bob_y := base_y + bob_offset
+	var pitch := sin(t * 2.0 + 0.5) * pitch_strength * speed_factor
+	var roll := sin(t * 1.3 + 1.0) * roll_strength * speed_factor
+
+	if wave_vertical_velocity > 0.0 or position.y > bob_y + 0.05:
 		wave_vertical_velocity -= gravity * delta
 		position.y += wave_vertical_velocity * delta
-		if position.y <= base_y:
-			position.y = base_y
-			wave_vertical_velocity = 0.0
-		_apply_boat_tilt(0.0, 0.0)
+		var land_blend := clampf(delta * 3.0, 0.0, 1.0)
+		if position.y <= bob_y:
+			position.y = lerpf(position.y, bob_y, land_blend)
+			wave_vertical_velocity = move_toward(wave_vertical_velocity, 0.0, delta * 8.0)
+			if absf(position.y - bob_y) < 0.02 and absf(wave_vertical_velocity) < 0.5:
+				wave_vertical_velocity = 0.0
+		_apply_boat_tilt(pitch, roll)
 	else:
-		var t := Time.get_ticks_msec() / 1000.0
-		var speed_factor := clampf(forward_speed / 18.0, 0.3, 1.5)
-		var bob_offset := (sin(t * 2.0) + sin(t * 3.7) * 0.3 + sin(t * 0.8) * 0.5) * bob_strength * speed_factor
-		position.y = base_y + bob_offset
-		var pitch := sin(t * 2.0 + 0.5) * pitch_strength * speed_factor
-		var roll := sin(t * 1.3 + 1.0) * roll_strength * speed_factor
+		position.y = bob_y
 		_apply_boat_tilt(pitch, roll)
 
 	var forward_delta := -transform.basis.z.normalized() * forward_speed * delta
@@ -99,7 +104,7 @@ func _apply_boat_tilt(pitch_deg: float, roll_deg: float) -> void:
 func apply_wave_profile(profile) -> void:
 	wave_turn_velocity += profile.turn_push
 	if profile.lift_force > 0.0:
-		wave_vertical_velocity = max(wave_vertical_velocity, profile.lift_force)
+		wave_vertical_velocity = maxf(wave_vertical_velocity, profile.lift_force)
 
 	if run_model == null:
 		return
