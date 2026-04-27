@@ -113,8 +113,9 @@ func _spawn_next_wave(forward: Vector3) -> void:
 	push_direction *= -1.0 if randf() < 0.5 else 1.0
 	var profile = WaveProfileScript.large(push_direction) if randf() < large_wave_chance else WaveProfileScript.small(push_direction)
 	if profile.is_large:
-		profile.lift_force = randf_range(4.0, 8.0)
-		profile.damage_risk = randf_range(6.0, 10.0)
+		profile.lateral_force = randf_range(5.0, 9.0)
+		profile.speed_multiplier = randf_range(0.5, 0.7)
+		profile.damage_per_second = randf_range(4.0, 8.0)
 	wave.reset_for_spawn(spawn_position, profile)
 	var drift_sign := -1.0 if randf() < 0.5 else 1.0
 	wave.configure_drift(right * drift_sign * profile.drift_speed)

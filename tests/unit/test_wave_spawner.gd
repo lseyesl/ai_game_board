@@ -66,20 +66,23 @@ func run() -> Array[String]:
 	if spawner.get_inactive_pool_size() != 1:
 		failures.append("releasing the same wave twice should not duplicate it in the inactive pool")
 
-	# Test: reset_for_spawn resets consumed and configures profile
+	# Test: reset_for_spawn enables monitoring and configures continuous-effect profile
 	var wave_c := spawner.acquire_wave()
 	var profile = WaveProfileScript.large(0.8)
-	profile.lift_force = 5.0
-	profile.damage_risk = 7.0
+	profile.lateral_force = 7.0
+	profile.speed_multiplier = 0.6
+	profile.damage_per_second = 5.0
 	wave_c.reset_for_spawn(Vector3(3.0, 0.0, -20.0), profile)
-	if wave_c.consumed:
-		failures.append("reset_for_spawn should reset consumed to false")
+	if wave_c.monitoring == false:
+		failures.append("reset_for_spawn should enable monitoring")
 	if not is_equal_approx(wave_c.turn_push, profile.turn_push):
 		failures.append("reset_for_spawn should configure turn_push from profile")
-	if not is_equal_approx(wave_c.lift_force, profile.lift_force):
-		failures.append("reset_for_spawn should configure lift_force from profile")
-	if not is_equal_approx(wave_c.damage_risk, profile.damage_risk):
-		failures.append("reset_for_spawn should configure damage_risk from profile")
+	if not is_equal_approx(wave_c.lateral_force, profile.lateral_force):
+		failures.append("reset_for_spawn should configure lateral_force from profile")
+	if not is_equal_approx(wave_c.speed_multiplier, profile.speed_multiplier):
+		failures.append("reset_for_spawn should configure speed_multiplier from profile")
+	if not is_equal_approx(wave_c.damage_per_second, profile.damage_per_second):
+		failures.append("reset_for_spawn should configure damage_per_second from profile")
 	if wave_c.is_large != profile.is_large:
 		failures.append("reset_for_spawn should configure is_large from profile")
 
@@ -106,7 +109,6 @@ func run() -> Array[String]:
 	# Place wave at +Z = behind ship, beyond cleanup distance
 	pooled_wave.position = Vector3(0.0, 0.0, 64.0)
 	pooled_wave.configure(WaveProfileScript.small(0.5))
-	pooled_wave.consumed = false
 	cleanup_spawner.add_child(pooled_wave)
 
 	seed(4242)
@@ -154,8 +156,6 @@ func run() -> Array[String]:
 	# Test: deactivate_to_pool disables monitoring
 	var wave_d := spawner.acquire_wave()
 	wave_d.deactivate_to_pool()
-	if not wave_d.consumed:
-		failures.append("deactivate_to_pool should set consumed to true")
 	if wave_d.monitoring:
 		failures.append("deactivate_to_pool should disable monitoring")
 
@@ -171,6 +171,45 @@ func run() -> Array[String]:
 	drift_wave._process(1.0)
 	if drift_wave.position.x <= pos_before:
 		failures.append("wave should move laterally when drift_velocity is set and _process is called")
+
+	# Test: drift_direction is exposed and normalized
+	var dir_wave := spawner.acquire_wave()
+	dir_wave._build_visuals()
+	dir_wave.configure_drift(Vector3(3.0, 0.0, -4.0))
+	if dir_wave.drift_direction.length() <= 0.0:
+		failures.append("drift_direction should be set by configure_drift")
+	if not is_equal_approx(dir_wave.drift_direction.length(), 1.0) and dir_wave.drift_direction.length() > 0.0:
+		failures.append("drift_direction should be a normalized vector")
+	var arrow := dir_wave.get_node_or_null("DriftArrow") as MeshInstance3D
+	if arrow == null:
+		failures.append("wave zone should build a DriftArrow visual indicator")
+	else:
+		if not arrow.visible:
+			failures.append("DriftArrow should be visible when drift_direction is non-zero")
+		dir_wave.configure_drift(Vector3.ZERO)
+		if arrow.visible:
+			failures.append("DriftArrow should hide when drift_direction is zero")
+
+	# Test: WaveZone is passive and does not react to body_entered directly
+	if drift_wave.has_method("_on_body_entered"):
+		failures.append("wave zone should not call ship methods from body_entered")
+
+	# Test: large waves are visually larger and use a larger collision area
+	var visual_wave := spawner.acquire_wave()
+	visual_wave._build_visuals()
+	visual_wave.configure(WaveProfileScript.large(0.6))
+	var visual_mesh := visual_wave.get_node_or_null("WaveMesh") as MeshInstance3D
+	var visual_collision := visual_wave.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if visual_mesh == null:
+		failures.append("wave visual test requires WaveMesh")
+	elif visual_mesh.scale.x <= 1.0 or visual_mesh.scale.z <= 1.0:
+		failures.append("large waves should scale the visual mesh larger than small waves")
+	if visual_collision == null or not (visual_collision.shape is BoxShape3D):
+		failures.append("wave visual test requires a BoxShape3D collision shape")
+	else:
+		var visual_box := visual_collision.shape as BoxShape3D
+		if visual_box.size.x <= 4.5 or visual_box.size.z <= 7.0:
+			failures.append("large waves should increase the collision box footprint")
 
 	# Test: deactivate_to_pool zeroes drift_velocity and stops processing
 	drift_wave.deactivate_to_pool()
