@@ -80,17 +80,24 @@ func generate_spawn_offset() -> Vector3:
 			)
 
 
-func is_in_spawn_band(offset: Vector3) -> bool:
-	if absf(offset.x) > _effective_spawn_outer_half_width():
+func is_in_spawn_band(offset: Vector3, forward: Vector3 = Vector3.FORWARD) -> bool:
+	var spawn_forward := _horizontal_forward(forward)
+	var spawn_right := spawn_forward.cross(Vector3.UP).normalized()
+	var local_x := offset.dot(spawn_right)
+	var local_z := -offset.dot(spawn_forward)
+	if absf(local_x) > _effective_spawn_outer_half_width():
 		return false
-	return offset.z >= -_effective_spawn_outer_half_depth() and offset.z <= -spawn_inner_half_depth
+	return local_z >= -_effective_spawn_outer_half_depth() and local_z <= -spawn_inner_half_depth
 
 
-func generate_validated_spawn_position(ship_position: Vector3, existing_positions: Array[Vector3]) -> Variant:
+func generate_validated_spawn_position(ship_position: Vector3, existing_positions: Array[Vector3], forward: Vector3 = Vector3.FORWARD) -> Variant:
 	var best_position: Variant = null
 	var best_distance := -1.0
+	var spawn_forward := _horizontal_forward(forward)
+	var spawn_right := spawn_forward.cross(Vector3.UP).normalized()
 	for _attempt in range(spawn_retry_limit):
-		var spawn_position := ship_position + generate_spawn_offset()
+		var spawn_offset := generate_spawn_offset()
+		var spawn_position := ship_position + spawn_right * spawn_offset.x + spawn_forward * -spawn_offset.z
 		if not _is_position_valid(spawn_position, existing_positions):
 			continue
 		var distance_to_ship := spawn_position.distance_to(ship_position)
@@ -139,6 +146,20 @@ func _is_position_valid(spawn_position: Vector3, existing_positions: Array[Vecto
 	return true
 
 
+func _horizontal_forward(candidate_forward: Vector3) -> Vector3:
+	var horizontal_forward := candidate_forward
+	horizontal_forward.y = 0.0
+	if horizontal_forward.length_squared() == 0.0:
+		return Vector3.FORWARD
+	return horizontal_forward.normalized()
+
+
+func _ship_forward() -> Vector3:
+	if ship != null and ship is Node3D:
+		return _horizontal_forward(-ship.global_transform.basis.z)
+	return Vector3.FORWARD
+
+
 func _get_node_position(node: Node3D) -> Vector3:
 	if node.is_inside_tree():
 		return node.global_position
@@ -169,7 +190,7 @@ func _spawn_next_island() -> bool:
 		if child is Area3D:
 			existing_positions.append(_get_node_position(child))
 
-	var spawn_position = generate_validated_spawn_position(_get_node_position(ship), existing_positions)
+	var spawn_position = generate_validated_spawn_position(_get_node_position(ship), existing_positions, _ship_forward())
 	if spawn_position == null:
 		return false
 

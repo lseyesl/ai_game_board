@@ -105,6 +105,11 @@ func run() -> Array[String]:
 		failures.append("spawn band should reject offsets behind the boat")
 	if not spawner.is_in_spawn_band(Vector3(0.0, 0.0, -16.0)):
 		failures.append("spawn band should include offsets on the forward inner boundary")
+	if not spawner.is_in_spawn_band(Vector3(0.0, 0.0, 16.0), Vector3.BACK):
+		failures.append("spawn band should include forward offsets after a 180-degree turn")
+	var right_side_spawn_offset := Vector3.LEFT * 20.0 + Vector3.FORWARD * 12.0
+	if not spawner.is_in_spawn_band(right_side_spawn_offset, Vector3.LEFT):
+		failures.append("spawn band should project rotated offsets into the ship-relative right-side spawn region")
 
 	spawner.minimum_island_spacing = 1000.0
 	spawner.spawn_retry_limit = 3
@@ -163,13 +168,47 @@ func run() -> Array[String]:
 	transformed_spawner.ship = ship
 
 	seed(424242)
-	var expected_world_spawn_position = transformed_spawner.generate_validated_spawn_position(ship.global_position, [])
+	var expected_world_spawn_position = transformed_spawner.generate_validated_spawn_position(ship.global_position, [], -ship.global_transform.basis.z)
 	seed(424242)
 	transformed_spawner._spawn_next_island()
 
 	var spawned_island = transformed_spawner.get_child(0)
 	if spawned_island.global_position.distance_to(expected_world_spawn_position) > 0.001:
 		failures.append("spawned islands should use the validated world-space spawn position even when the spawner has a parent transform")
+
+	var turn_parent = Node3D.new()
+	scene_tree.root.add_child(turn_parent)
+
+	var turned_spawner = IslandSpawnerScript.new()
+	turned_spawner.spawn_outer_half_width = 28.0
+	turned_spawner.spawn_outer_half_depth = 42.0
+	turned_spawner.spawn_inner_half_width = 10.0
+	turned_spawner.spawn_inner_half_depth = 16.0
+	turned_spawner.preview_visible_distance = 0.0
+	turned_spawner.minimum_island_spacing = 0.0
+	turned_spawner.spawn_retry_limit = 1
+	turn_parent.add_child(turned_spawner)
+
+	var turned_ship = Node3D.new()
+	turned_ship.position = Vector3.ZERO
+	turned_ship.rotation = Vector3(0.0, PI, 0.0)
+	turn_parent.add_child(turned_ship)
+	turned_spawner.ship = turned_ship
+
+	seed(123456)
+	if not turned_spawner._spawn_next_island():
+		failures.append("island spawner should spawn an island after the ship turns 180 degrees")
+	else:
+		var turned_island = turned_spawner.get_child(0)
+		var turned_offset: Vector3 = turned_island.global_position - turned_ship.global_position
+		var turned_forward: Vector3 = -turned_ship.global_transform.basis.z.normalized()
+		var turned_right: Vector3 = turned_forward.cross(Vector3.UP).normalized()
+		var forward_distance := turned_offset.dot(turned_forward)
+		var lateral_distance := absf(turned_offset.dot(turned_right))
+		if forward_distance < turned_spawner.spawn_inner_half_depth or forward_distance > turned_spawner.spawn_outer_half_depth:
+			failures.append("islands spawned after a 180-degree turn should stay in the ship-relative forward spawn band")
+		if lateral_distance > turned_spawner.spawn_outer_half_width:
+			failures.append("islands spawned after a 180-degree turn should stay within the ship-relative lateral spawn width")
 
 	var reveal_spawner = IslandSpawnerScript.new()
 	reveal_spawner.target_island_count = 0
@@ -222,7 +261,7 @@ func run() -> Array[String]:
 		failures.append("release_island_to_pool should still move the island into the inactive pool after deactivation")
 
 	seed(11111)
-	var expected_reused_spawn_position = lifecycle_spawner.generate_validated_spawn_position(lifecycle_ship.global_position, [])
+	var expected_reused_spawn_position = lifecycle_spawner.generate_validated_spawn_position(lifecycle_ship.global_position, [], -lifecycle_ship.global_transform.basis.z)
 	seed(11111)
 	if not lifecycle_spawner._spawn_next_island():
 		failures.append("pooled lifecycle integration test should be able to spawn a reused island")
@@ -298,6 +337,7 @@ func run() -> Array[String]:
 	if near_island.reveal_history.size() < 2:
 		failures.append("spawner should recalculate reveal state on later process ticks")
 
+	turn_parent.queue_free()
 	parent.queue_free()
 
 	return failures
