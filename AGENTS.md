@@ -37,6 +37,7 @@
 - `docs/ai/commit-convention.md` — commit message 格式和 type 清单
 - `docs/ai/plan-workflow.md` — plan 流程（调研→设计→计划→实现→归档确认）
 - `docs/ai/worktree-branch-cleanup.md` — worktree 创建、合并、清理流程
+- Git commit 前必须强制参考 `docs/ai/commit-convention.md`，并按其中的格式、type、footer/trailer 和验证要求提交。
 
 ## Repo-local noise to ignore during exploration
 - `.godot/` and `.import/` are generated editor/import artifacts.

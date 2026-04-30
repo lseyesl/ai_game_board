@@ -4,10 +4,18 @@
 
 ```
 <type>: <subject>
+
+<body 可选>
+
+Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-openagent)
+
+Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>
 ```
 
 - **subject**：简短描述改了什么，用英文，不加句号，不超过 72 字符
 - 不写 body 除非改动确实需要额外说明
+- AI 代提交时，保留上面的 Sisyphus footer 和 `Co-authored-by` trailer
+- 例：`docs: add project README`
 
 ## Type 清单
 
@@ -28,3 +36,5 @@
 3. **feat/fix 类 commit 必须可验证** — 跑过测试或手动验证后再提交
 4. **不要提交破坏的代码** — 测试不过 = 不提交
 5. **docs/chore 类 commit 可以独立于测试** — 纯文档/归档不需要跑测试
+6. **提交前先看历史风格** — 用最近 commit 确认语言和格式；本仓库使用英文 semantic commit
+7. **文档新增/修改用 `docs`** — 例如新增 README：`docs: add project README`
