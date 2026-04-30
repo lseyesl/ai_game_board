@@ -1,0 +1,96 @@
+name: Build Android APK Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, e.g. v0.1.0"
+        required: true
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    env:
+      GODOT_VERSION: 4.6.2
+      GODOT_STATUS: stable
+      APK_NAME: ai_game_board-${{ inputs.version }}.apk
+      GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/debug.keystore
+      GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+      GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+      GODOT_ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "build-tools;35.0.1" \
+            "platforms;android-35" \
+            "cmdline-tools;latest" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+          yes | sdkmanager --licenses
+
+      - name: Download Godot
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64.zip
+          unzip -q Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64.zip
+          mv Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Install Godot export templates
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}
+          unzip -q Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/
+
+      - name: Create debug keystore
+        run: |
+          keytool -genkeypair \
+            -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Build APK
+        run: |
+          mkdir -p build
+          ./godot --headless --path . --export-debug "Android" "build/${APK_NAME}"
+          ls -lh build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ai_game_board ${{ inputs.version }}
+          body: |
+            Android APK build for ${{ inputs.version }}
+
+            This is a debug-signed APK for installation/testing.
+          files: build/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
