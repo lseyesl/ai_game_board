@@ -11,6 +11,8 @@ const WaveProfileScript = preload("res://scripts/waves/wave_profile.gd")
 @export var max_spacing: float = 22.0
 @export var lane_width: float = 12.0
 @export var large_wave_chance: float = 0.28
+@export var max_large_wave_chance: float = 0.45
+@export var full_difficulty_distance: float = 800.0
 
 var ship = null
 var run_model = null
@@ -71,6 +73,27 @@ func get_next_spawn_z(current_z: float) -> float:
 	return current_z - min_spacing
 
 
+func get_difficulty_factor() -> float:
+	if run_model == null or full_difficulty_distance <= 0.0:
+		return 0.0
+	return clampf(run_model.distance / full_difficulty_distance, 0.0, 1.0)
+
+
+func get_large_wave_chance() -> float:
+	return lerpf(large_wave_chance, max_large_wave_chance, get_difficulty_factor())
+
+
+func _build_wave_profile(push_direction: float, is_large_wave: bool) -> WaveProfile:
+	var profile = WaveProfileScript.large(push_direction) if is_large_wave else WaveProfileScript.small(push_direction)
+	if not is_large_wave:
+		return profile
+	var difficulty := get_difficulty_factor()
+	profile.turn_push *= lerpf(1.0, 1.25, difficulty)
+	profile.lateral_force = lerpf(7.0, 10.5, difficulty)
+	profile.damage_per_second = lerpf(5.0, 8.5, difficulty)
+	return profile
+
+
 func _ship_forward() -> Vector3:
 	if ship != null and ship is Node3D:
 		var fwd: Vector3 = -ship.global_transform.basis.z.normalized()
@@ -115,11 +138,14 @@ func _spawn_next_wave(forward: Vector3) -> void:
 	wave.spawner = self
 	var push_direction := randf_range(0.35, 0.95)
 	push_direction *= -1.0 if randf() < 0.5 else 1.0
-	var profile = WaveProfileScript.large(push_direction) if randf() < large_wave_chance else WaveProfileScript.small(push_direction)
+	var profile = _build_wave_profile(push_direction, randf() < get_large_wave_chance())
 	if profile.is_large:
-		profile.lateral_force = randf_range(5.0, 9.0)
+		var difficulty := get_difficulty_factor()
+		var lateral_multiplier := lerpf(1.0, 1.22, difficulty)
+		var damage_multiplier := lerpf(1.0, 1.375, difficulty)
+		profile.lateral_force = randf_range(5.0, 9.0) * lateral_multiplier
 		profile.speed_multiplier = randf_range(0.5, 0.7)
-		profile.damage_per_second = randf_range(4.0, 8.0)
+		profile.damage_per_second = randf_range(4.0, 8.0) * damage_multiplier
 	wave.reset_for_spawn(spawn_position, profile)
 	var drift_sign := -1.0 if randf() < 0.5 else 1.0
 	wave.configure_drift(right * drift_sign * profile.drift_speed)

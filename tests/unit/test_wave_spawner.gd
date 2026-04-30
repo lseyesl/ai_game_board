@@ -3,6 +3,7 @@ extends RefCounted
 const WaveSpawnerScript = preload("res://scripts/waves/wave_spawner.gd")
 const WaveZoneScript = preload("res://scripts/waves/wave_zone.gd")
 const WaveProfileScript = preload("res://scripts/waves/wave_profile.gd")
+const RunModelScript = preload("res://scripts/core/run_model.gd")
 
 
 func run() -> Array[String]:
@@ -85,6 +86,29 @@ func run() -> Array[String]:
 		failures.append("reset_for_spawn should configure damage_per_second from profile")
 	if wave_c.is_large != profile.is_large:
 		failures.append("reset_for_spawn should configure is_large from profile")
+
+	# Test: distance-based difficulty keeps the start friendly and ramps wave threat later
+	var difficulty_spawner = WaveSpawnerScript.new()
+	if not is_equal_approx(difficulty_spawner.get_difficulty_factor(), 0.0):
+		failures.append("wave difficulty should start at the base value before the player travels")
+	var difficulty_model = RunModelScript.new()
+	difficulty_model.distance = 800.0
+	difficulty_spawner.run_model = difficulty_model
+	if difficulty_spawner.get_difficulty_factor() < 0.99:
+		failures.append("wave difficulty should reach full pressure after long travel distance")
+	if difficulty_spawner.get_large_wave_chance() <= difficulty_spawner.large_wave_chance:
+		failures.append("large wave chance should increase with travel distance")
+
+	var scaled_large_profile = difficulty_spawner._build_wave_profile(0.8, true)
+	if scaled_large_profile.damage_per_second <= 8.0:
+		failures.append("large wave damage should scale above the current maximum at high distance")
+	if scaled_large_profile.lateral_force <= 9.0:
+		failures.append("large wave lateral force should scale above the current maximum at high distance")
+	if scaled_large_profile.turn_push <= 0.8:
+		failures.append("large wave turn push should scale with travel distance")
+	var scaled_small_profile = difficulty_spawner._build_wave_profile(0.4, false)
+	if scaled_small_profile.damage_per_second != 0.0:
+		failures.append("small waves should stay non-damaging during progressive difficulty")
 
 	# Test: cleanup-driven reuse during _process
 	# Ship faces -Z (default), so "behind" = positive Z direction.
