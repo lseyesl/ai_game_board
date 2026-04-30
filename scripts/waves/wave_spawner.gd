@@ -36,6 +36,7 @@ func _process(_delta: float) -> void:
 
 	var ship_position := ship.global_position as Vector3
 	var forward := _ship_forward()
+	var right := forward.cross(Vector3.UP).normalized()
 
 	# Cleanup: release waves behind the ship
 	var waves_to_release: Array[WaveZone] = []
@@ -53,8 +54,10 @@ func _process(_delta: float) -> void:
 	var max_ahead := -INF
 	for child in get_children():
 		if child is Area3D:
-			var forward_dist: float = (child.global_position as Vector3 - ship_position).dot(forward)
-			if forward_dist > 0.0 and forward_dist > max_ahead:
+			var offset: Vector3 = child.global_position - ship_position
+			var forward_dist: float = offset.dot(forward)
+			var lateral_dist: float = absf(offset.dot(right))
+			if forward_dist > 0.0 and lateral_dist <= lane_width and forward_dist > max_ahead:
 				max_ahead = forward_dist
 	_furthest_ahead_distance = max_ahead if max_ahead > -INF else 0.0
 

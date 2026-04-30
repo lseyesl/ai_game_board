@@ -153,6 +153,40 @@ func run() -> Array[String]:
 		if not all_ahead:
 			failures.append("spawned waves should appear ahead of the ship along its forward direction, not behind it")
 
+	# Test: waves that drift far outside the lane should not block fresh ahead spawns
+	var off_lane_spawner = WaveSpawnerScript.new()
+	off_lane_spawner.spawn_distance_ahead = 60.0
+	off_lane_spawner.cleanup_distance_behind = 25.0
+	off_lane_spawner.min_spacing = 18.0
+	off_lane_spawner.max_spacing = 20.0
+	off_lane_spawner.lane_width = 6.0
+	off_lane_spawner.large_wave_chance = 0.0
+	parent.add_child(off_lane_spawner)
+
+	var off_lane_ship = Node3D.new()
+	off_lane_ship.position = Vector3.ZERO
+	parent.add_child(off_lane_ship)
+	off_lane_spawner.ship = off_lane_ship
+
+	var off_lane_wave := off_lane_spawner.acquire_wave()
+	off_lane_wave.position = Vector3(100.0, 0.0, -100.0)
+	off_lane_wave.configure(WaveProfileScript.small(0.5))
+	off_lane_spawner.add_child(off_lane_wave)
+
+	seed(31337)
+	off_lane_spawner._process(0.0)
+	var has_near_lane_spawn := false
+	var off_lane_forward := off_lane_spawner._ship_forward()
+	var off_lane_right := off_lane_forward.cross(Vector3.UP).normalized()
+	for child in off_lane_spawner.get_children():
+		var offset: Vector3 = child.global_position - off_lane_ship.global_position
+		var forward_dist: float = offset.dot(off_lane_forward)
+		var lateral_dist: float = absf(offset.dot(off_lane_right))
+		if child != off_lane_wave and forward_dist > 0.0 and lateral_dist <= off_lane_spawner.lane_width:
+			has_near_lane_spawn = true
+	if not has_near_lane_spawn:
+		failures.append("off-lane waves should not prevent new in-lane waves from spawning ahead")
+
 	# Test: deactivate_to_pool disables monitoring
 	var wave_d := spawner.acquire_wave()
 	wave_d.deactivate_to_pool()
