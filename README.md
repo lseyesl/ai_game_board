@@ -46,4 +46,4 @@ godot --headless --path . -s res://tools/inspect_board.gd
 
 ## Controls
 
-Steering input prefers device accelerometer, then gyroscope, and falls back to the default `ui_left` / `ui_right` keyboard actions. After game over, press `ui_accept` or tap/click to restart.
+Steering input uses the device gyroscope, and falls back to the default `ui_left` / `ui_right` keyboard actions on desktop. After game over, press `ui_accept` or tap/click to restart.
