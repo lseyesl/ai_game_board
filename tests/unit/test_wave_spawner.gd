@@ -118,6 +118,33 @@ func run() -> Array[String]:
 	if not cleanup_spawner.get_children().has(pooled_wave):
 		failures.append("spawner should reuse a cleaned-up wave when replacing far waves during process")
 
+	# Test: recently passed waves stay active during sharp turns while still near the ship
+	var turning_cleanup_spawner = WaveSpawnerScript.new()
+	turning_cleanup_spawner.spawn_distance_ahead = 0.0
+	turning_cleanup_spawner.cleanup_distance_behind = 25.0
+	turning_cleanup_spawner.min_spacing = 14.0
+	turning_cleanup_spawner.max_spacing = 22.0
+	turning_cleanup_spawner.lane_width = 12.0
+	turning_cleanup_spawner.large_wave_chance = 0.0
+	parent.add_child(turning_cleanup_spawner)
+
+	var turning_cleanup_ship = Node3D.new()
+	turning_cleanup_ship.position = Vector3.ZERO
+	turning_cleanup_ship.rotation = Vector3(0.0, PI, 0.0)
+	parent.add_child(turning_cleanup_ship)
+	turning_cleanup_spawner.ship = turning_cleanup_ship
+
+	var nearby_passed_wave := turning_cleanup_spawner.acquire_wave()
+	nearby_passed_wave.position = Vector3(0.0, 0.0, -30.0)
+	nearby_passed_wave.configure(WaveProfileScript.small(0.5))
+	turning_cleanup_spawner.add_child(nearby_passed_wave)
+
+	turning_cleanup_spawner._process(0.0)
+	if not turning_cleanup_spawner.get_children().has(nearby_passed_wave):
+		failures.append("nearby waves should survive cleanup during sharp turns after the ship passes them")
+	if turning_cleanup_spawner.get_inactive_pool_size() != 0:
+		failures.append("nearby waves should not be moved into the inactive pool during sharp turns")
+
 	# Test: direction-aware spawn — waves should appear ahead of the ship along its forward direction
 	var dir_spawner = WaveSpawnerScript.new()
 	dir_spawner.spawn_distance_ahead = 60.0

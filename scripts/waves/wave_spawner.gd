@@ -6,6 +6,7 @@ const WaveProfileScript = preload("res://scripts/waves/wave_profile.gd")
 
 @export var spawn_distance_ahead: float = 100.0
 @export var cleanup_distance_behind: float = 25.0
+@export var cleanup_protection_radius: float = 45.0
 @export var min_spacing: float = 14.0
 @export var max_spacing: float = 22.0
 @export var lane_width: float = 12.0
@@ -44,7 +45,7 @@ func _process(_delta: float) -> void:
 		if child is Area3D:
 			var offset: Vector3 = child.global_position - ship_position
 			var forward_dist: float = offset.dot(forward)
-			if forward_dist < -cleanup_distance_behind:
+			if offset.length() > cleanup_protection_radius and forward_dist < -cleanup_distance_behind:
 				waves_to_release.append(child)
 
 	for wave in waves_to_release:
