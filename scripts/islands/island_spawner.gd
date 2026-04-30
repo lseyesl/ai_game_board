@@ -5,6 +5,7 @@ const IslandScene = preload("res://scenes/islands/Island.tscn")
 
 @export var target_island_count: int = 8
 @export var cleanup_radius: float = 85.0
+@export var cleanup_protection_radius: float = 45.0
 @export var spawn_outer_half_width: float = 28.0
 @export var spawn_outer_half_depth: float = 42.0
 @export var spawn_inner_half_width: float = 10.0
@@ -34,7 +35,7 @@ func _process(_delta: float) -> void:
 
 	var islands_to_release: Array[Island] = []
 	for child in get_children():
-		if child is Island and child.global_position.distance_to(ship.global_position) > cleanup_radius:
+		if child is Island and _should_release_island(child.global_position, ship.global_position):
 			islands_to_release.append(child)
 
 	for island in islands_to_release:
@@ -144,6 +145,11 @@ func _is_position_valid(spawn_position: Vector3, existing_positions: Array[Vecto
 		if spawn_position.distance_to(existing_position) < minimum_island_spacing:
 			return false
 	return true
+
+
+func _should_release_island(island_position: Vector3, ship_position: Vector3) -> bool:
+	var distance_to_ship := island_position.distance_to(ship_position)
+	return distance_to_ship > cleanup_protection_radius and distance_to_ship > cleanup_radius
 
 
 func _horizontal_forward(candidate_forward: Vector3) -> Vector3:

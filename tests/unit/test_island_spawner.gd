@@ -307,6 +307,27 @@ func run() -> Array[String]:
 		if reused_runtime_island != pooled_runtime_island:
 			failures.append("spawner should reuse a cleaned-up island when replacing far islands during process")
 
+	var turning_cleanup_spawner = IslandSpawnerScript.new()
+	turning_cleanup_spawner.target_island_count = 0
+	turning_cleanup_spawner.cleanup_radius = 20.0
+	parent.add_child(turning_cleanup_spawner)
+
+	var turning_cleanup_ship = Node3D.new()
+	turning_cleanup_ship.position = Vector3.ZERO
+	turning_cleanup_ship.rotation = Vector3(0.0, PI, 0.0)
+	parent.add_child(turning_cleanup_ship)
+	turning_cleanup_spawner.ship = turning_cleanup_ship
+
+	var nearby_passed_island = turning_cleanup_spawner.acquire_island()
+	nearby_passed_island.position = Vector3(0.0, 0.0, -30.0)
+	turning_cleanup_spawner.add_child(nearby_passed_island)
+
+	turning_cleanup_spawner._process(0.0)
+	if not turning_cleanup_spawner.get_children().has(nearby_passed_island):
+		failures.append("nearby islands should survive cleanup during sharp turns after the ship passes them")
+	if turning_cleanup_spawner.get_inactive_pool_size() != 0:
+		failures.append("nearby islands should not be moved into the inactive pool during sharp turns")
+
 	var reveal_ship = Node3D.new()
 	reveal_ship.position = Vector3.ZERO
 	parent.add_child(reveal_ship)
