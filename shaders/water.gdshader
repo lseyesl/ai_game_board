@@ -58,18 +58,34 @@ void fragment() {
 	vec3 perturbed_normal_world = normalize(model_mat * perturbed_local);
 	NORMAL = perturbed_normal_world;
 
-	// Depth color gradient — high wave = shallow/light, low = deep/dark
-	vec3 shallow_color = vec3(0.494, 0.784, 0.890); // #7EC8E3
-	vec3 deep_color    = vec3(0.227, 0.486, 0.647); // #3A7CA5
+	// Depth color gradient — high wave = lagoon/aqua, low = saturated blue.
+	vec3 shallow_color = vec3(0.267, 0.827, 0.843); // animated aqua
+	vec3 mid_color     = vec3(0.102, 0.596, 0.737); // clear cyan-blue
+	vec3 deep_color    = vec3(0.071, 0.298, 0.529); // rich cartoon ocean
 	float depth_factor = smoothstep(-wave_amplitude, wave_amplitude, wave_height);
-	vec3 base_color = mix(deep_color, shallow_color, depth_factor);
+	vec3 base_color = mix(deep_color, mid_color, depth_factor);
 
-	// Hard-edge Blinn-Phong specular (cartoon style)
+	// Animated aqua bands carry most of the stylization without washing the sea white.
+	float aqua_band = smoothstep(0.64, 0.82, sin(wp.x * 0.09 + wp.z * 0.055 + t * wave_speed * 0.75) * 0.5 + 0.5);
+	base_color = mix(base_color, shallow_color, aqua_band * 0.22 * depth_factor);
+
+	float teal_ribbon = smoothstep(0.48, 0.54, sin(wp.x * 0.18 - wp.z * 0.07 + t * wave_speed * 1.4) * 0.5 + 0.5);
+	base_color += vec3(0.0, 0.11, 0.13) * teal_ribbon * 0.12;
+
+	// Narrow Blinn-Phong glints: bright accents, not broad white patches.
 	vec3 view_dir = normalize(CAMERA_POSITION_WORLD - wp);
 	vec3 half_vec = normalize(normalize(sun_direction) + view_dir);
-	float spec = pow(max(dot(perturbed_normal_world, half_vec), 0.0), 64.0);
-	float spec_cartoon = step(0.5, spec); // crisp edge for stylized look
-	base_color += vec3(1.0) * spec_cartoon * 0.6;
+	float spec = pow(max(dot(perturbed_normal_world, half_vec), 0.0), 128.0);
+	float narrow_glint = smoothstep(0.78, 0.94, spec);
+
+	// Short animated foam lines sit on wave crests for an anime-water feel.
+	float crest_mask = smoothstep(0.18, 0.30, wave_height);
+	float line_wave = sin(wp.x * 0.42 + wp.z * 0.18 + t * wave_speed * 2.8) * 0.5 + 0.5;
+	float broken_line = smoothstep(0.86, 0.96, line_wave);
+	float foam_line = crest_mask * broken_line;
+
+	base_color += vec3(0.82, 0.98, 1.0) * narrow_glint * 0.22;
+	base_color += vec3(0.72, 0.96, 1.0) * foam_line * 0.18;
 
 	// Edge alpha fade — PlaneMesh is 220x420 and follows sea_center.
 	vec3 local_wp = wp - sea_center;

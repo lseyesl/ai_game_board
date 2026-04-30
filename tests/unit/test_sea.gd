@@ -32,6 +32,18 @@ func run() -> Array[String]:
 			elif sea_center != sea.position:
 				failures.append("water shader sea_center should match the moving sea position")
 
+	var shader_file := FileAccess.open("res://shaders/water.gdshader", FileAccess.READ)
+	if shader_file == null:
+		failures.append("water shader file should be readable for visual style regression checks")
+	else:
+		var shader_source := shader_file.get_as_text()
+		if shader_source.contains("step(0.5, spec)"):
+			failures.append("water shader should avoid broad white cartoon specular blocks")
+		if not shader_source.contains("foam_line"):
+			failures.append("water shader should use narrow animated foam lines instead of large white areas")
+		if not shader_source.contains("aqua_band"):
+			failures.append("water shader should add aqua color banding for a more animated sea style")
+
 	sea.free()
 	target.free()
 
