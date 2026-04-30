@@ -88,6 +88,7 @@ func _build_gameplay() -> void:
 
 	debug_overlay = DebugOverlayScript.new()
 	debug_overlay.wave_spawner = wave_spawner
+	debug_overlay.steering_input = ship.input_adapter
 	add_child(debug_overlay)
 
 	island_spawner = IslandSpawnerScript.new()

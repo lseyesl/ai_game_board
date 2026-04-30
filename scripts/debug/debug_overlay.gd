@@ -4,6 +4,7 @@ extends Node
 var wave_zones_visible := true
 var stats_panel_visible := true
 var wave_spawner = null
+var steering_input = null
 
 var _stats_label: Label = null
 var _canvas: CanvasLayer = null
@@ -31,7 +32,13 @@ func _process(_delta: float) -> void:
 
 	var furthest: float = wave_spawner._furthest_ahead_distance
 	var large_ratio := float(large_count) / float(maxi(active_count, 1)) * 100.0
-	_stats_label.text = "Waves: %d active / %d pooled\nLarge: %d (%.0f%%)\nFurthest ahead: %.0fm\n[F1] Toggle zones  [F2] Toggle stats" % [active_count, pool_size, large_count, large_ratio, furthest]
+	var sensor_text := ""
+	if steering_input != null:
+		sensor_text = "\nGyro: (%.2f, %.2f, %.2f)\nAccel: (%.2f, %.2f, %.2f)" % [
+			steering_input.gyro_raw.x, steering_input.gyro_raw.y, steering_input.gyro_raw.z,
+			steering_input.accel_raw.x, steering_input.accel_raw.y, steering_input.accel_raw.z,
+		]
+	_stats_label.text = "Waves: %d active / %d pooled\nLarge: %d (%.0f%%)\nFurthest ahead: %.0fm%s\n[F1] Toggle zones  [F2] Toggle stats" % [active_count, pool_size, large_count, large_ratio, furthest, sensor_text]
 
 
 func _unhandled_input(event: InputEvent) -> void:

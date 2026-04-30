@@ -29,7 +29,7 @@
 - `scripts/main/main.gd` preloads and instantiates nearly every subsystem programmatically.
 - `scripts/ship/ship_controller.gd` loads `res://assets/board.glb` at runtime and builds its collision shape in code.
 - `scripts/ui/hud.gd` builds the HUD in code.
-- `scripts/input/steering_input.gd` prefers gyroscope, then keyboard fallback via default `ui_left` / `ui_right` actions.
+- `scripts/input/steering_input.gd` combines gyroscope and accelerometer input, then keyboard fallback via default `ui_left` / `ui_right` actions.
 - Restart flow uses `ui_accept` in `scripts/main/main.gd`.
 
 ## AI workflow references
