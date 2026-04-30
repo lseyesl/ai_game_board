@@ -10,9 +10,9 @@ signal safe_zone_changed(in_safe_zone: bool)
 @export var forward_speed: float = 18.0
 @export var turn_speed: float = 1.7
 @export var steering_smoothing: float = 5.0
-@export var bob_strength: float = 0.4
-@export var pitch_strength: float = 2.5
-@export var roll_strength: float = 1.8
+@export var bob_strength: float = 0.55
+@export var pitch_strength: float = 3.4
+@export var roll_strength: float = 2.6
 @export var gravity: float = 18.0
 
 var input_adapter = null
@@ -24,6 +24,7 @@ var wave_turn_damping: float = 2.8
 var wave_lateral_velocity: Vector3 = Vector3.ZERO
 var wave_lateral_damping: float = 3.0
 var wave_speed_multiplier: float = 1.0
+var wave_rock_multiplier: float = 1.0
 var current_push_velocity: Vector3 = Vector3.ZERO
 var base_y: float = 0.0
 var current_repair_rate: float = 0.0
@@ -64,8 +65,8 @@ func simulate_tick_with_waves(delta: float, steering_input: float, overlapping: 
 	var bob_y := base_y + bob_offset
 	position.y = bob_y
 
-	var pitch := sin(t * 2.0 + 0.5) * pitch_strength * speed_factor
-	var roll := sin(t * 1.3 + 1.0) * roll_strength * speed_factor
+	var pitch := sin(t * 2.0 + 0.5) * pitch_strength * speed_factor * wave_rock_multiplier
+	var roll := sin(t * 1.3 + 1.0) * roll_strength * speed_factor * wave_rock_multiplier
 	_apply_boat_tilt(pitch, roll)
 
 	var forward_delta := -transform.basis.z.normalized() * forward_speed * wave_speed_multiplier * delta
@@ -93,6 +94,7 @@ func simulate_wave_effects(overlapping: Array, delta: float) -> void:
 	var min_speed_multiplier := 1.0
 	var total_damage := 0.0
 	var total_turn_push := 0.0
+	var strongest_wave_intensity := 0.0
 	var has_wave_overlap := false
 
 	for area in overlapping:
@@ -104,8 +106,13 @@ func simulate_wave_effects(overlapping: Array, delta: float) -> void:
 			min_speed_multiplier = minf(min_speed_multiplier, wave.speed_multiplier)
 			total_damage += wave.damage_per_second * delta
 			total_turn_push += wave.turn_push
+			strongest_wave_intensity = maxf(strongest_wave_intensity, wave.lateral_force / 7.0)
+			strongest_wave_intensity = maxf(strongest_wave_intensity, wave.turn_push / 0.5)
+			if wave.is_large:
+				strongest_wave_intensity = maxf(strongest_wave_intensity, 1.0)
 
 	wave_speed_multiplier = min_speed_multiplier if has_wave_overlap else 1.0
+	wave_rock_multiplier = 1.0 + clampf(strongest_wave_intensity, 0.0, 1.0) * 0.75
 	wave_turn_velocity = total_turn_push
 
 	if net_lateral.length() > 0.001:

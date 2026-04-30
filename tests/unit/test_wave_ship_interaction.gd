@@ -64,6 +64,29 @@ func run() -> Array[String]:
 	if not is_equal_approx(actual_forward, 10.0):
 		failures.append("ship speed should return to normal immediately when no waves overlap")
 
+	# --- Overlapping waves visibly amplify boat pitch and roll ---
+	var calm_ship = ShipControllerScript.new()
+	calm_ship.run_model = RunModelScript.new()
+	calm_ship.input_adapter = SteeringInputScript.new()
+	calm_ship._build_visuals()
+	calm_ship.simulate_tick_with_waves(0.0, 0.0, [])
+	var calm_boat_model := calm_ship.get_node_or_null("BoatModel") as Node3D
+	var calm_pitch := absf(calm_boat_model.rotation_degrees.x)
+	var calm_roll := absf(calm_boat_model.rotation_degrees.z)
+
+	var wave_ship = ShipControllerScript.new()
+	wave_ship.run_model = RunModelScript.new()
+	wave_ship.input_adapter = SteeringInputScript.new()
+	wave_ship._build_visuals()
+	wave_ship.simulate_tick_with_waves(0.0, 0.0, [_make_wave(Vector3(1.0, 0.0, 0.0), 7.0, 0.6, 8.0, 0.5)])
+	var wave_boat_model := wave_ship.get_node_or_null("BoatModel") as Node3D
+	if absf(wave_boat_model.rotation_degrees.x) <= calm_pitch:
+		failures.append("overlapping waves should amplify boat pitch to show rougher water")
+	if absf(wave_boat_model.rotation_degrees.z) <= calm_roll:
+		failures.append("overlapping waves should amplify boat roll to show rougher water")
+	calm_ship.free()
+	wave_ship.free()
+
 	# --- Stale lateral velocity decays when overlapping waves have no net lateral direction ---
 	ship.wave_lateral_velocity = Vector3(9.0, 0.0, 0.0)
 	ship.simulate_wave_effects([_make_wave(Vector3.ZERO, 4.0, 0.75, 0.0, 0.0)], 1.0)
