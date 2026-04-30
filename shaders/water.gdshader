@@ -4,6 +4,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back;
 uniform float wave_speed : hint_range(0.1, 3.0) = 1.0;
 uniform float wave_amplitude : hint_range(0.05, 1.0) = 0.3;
 uniform vec3 sun_direction = vec3(0.5, 0.8, 0.3);
+uniform vec3 sea_center = vec3(0.0, 0.0, 0.0);
 
 varying float wave_height;
 varying vec3 world_position;
@@ -70,9 +71,10 @@ void fragment() {
 	float spec_cartoon = step(0.5, spec); // crisp edge for stylized look
 	base_color += vec3(1.0) * spec_cartoon * 0.6;
 
-	// Edge alpha fade — PlaneMesh is 220x420, sea.gd offsets Z by -40
-	float dist_x = abs(wp.x) / 110.0;
-	float dist_z = abs(wp.z + 40.0) / 210.0;
+	// Edge alpha fade — PlaneMesh is 220x420 and follows sea_center.
+	vec3 local_wp = wp - sea_center;
+	float dist_x = abs(local_wp.x) / 110.0;
+	float dist_z = abs(local_wp.z) / 210.0;
 	float edge = max(dist_x, dist_z);
 	float alpha = 1.0 - smoothstep(0.8, 1.0, edge);
 
