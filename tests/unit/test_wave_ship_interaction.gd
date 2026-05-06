@@ -33,8 +33,11 @@ func run() -> Array[String]:
 	ship.forward_speed = 10.0
 	ship.base_y = 0.0
 	ship._build_visuals()
-	if ship.get_node_or_null("BoatModel") == null:
+	var boat_model := ship.get_node_or_null("BoatModel") as Node3D
+	if boat_model == null:
 		failures.append("ship should load the board.glb boat model")
+	elif not is_equal_approx(wrapf(boat_model.rotation_degrees.y, -180.0, 180.0), -180.0):
+		failures.append("ship visual model should yaw 180 degrees so the bow faces movement direction")
 	ship.simulate_tick(1.0, 0.0)
 	if ship.position_delta.z >= 0.0:
 		failures.append("ship should move forward along negative z")

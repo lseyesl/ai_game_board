@@ -194,7 +194,7 @@ func _build_visuals() -> void:
 	var boat_model = boat_scene.instantiate()
 	boat_model.name = "BoatModel"
 	boat_model.position = Vector3(0.0, 0.0, 0.0)
-	boat_model.rotation_degrees = Vector3(0.0, 0.0, 0.0)
+	boat_model.rotation_degrees = Vector3(0.0, 180.0, 0.0)
 	boat_model.scale = Vector3(4.0, 4.0, 4.0)
 	_promote_visual_priority(boat_model)
 	add_child(boat_model)
